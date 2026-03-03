@@ -49,7 +49,6 @@ impl TimerWidget {
 
             .focus-mode {
                 background-color: rgba(0, 0, 0, 0.05);
-                padding: 5px;
             }
 
             .timer-label { font-size: 24px; font-weight: bold; color: white; }
