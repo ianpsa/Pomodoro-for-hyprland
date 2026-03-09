@@ -67,16 +67,17 @@ fn build_ui(app: &gtk4::Application) {
             if let Some(stream) = overlay_video.media_stream() {
                 stream.pause();
                 stream.set_muted(true);
-                stream.set_volume(0.0);
             }
-            overlay_video.set_file(None::<&gio::File>);
 
             *rest_remaining.borrow_mut() = 0;
             overlay_win.set_visible(false);
 
-            let mut timer = timer_logic.borrow_mut();
-            timer.state = timer::pomodoro::TimerState::Play;
-            timer_ui.play_button.set_label("Pausar");
+            timer_logic.borrow_mut().reset_to_base();
+            timer_ui.play_button.set_label("Pomodoro!");
+            timer_ui
+                .time_label
+                .set_text(&utils::format_time(timer_logic.borrow().current_time));
+            timer_ui.drawing_area.queue_draw();
         });
     }
 
@@ -122,16 +123,18 @@ fn build_ui(app: &gtk4::Application) {
             if overlay_win.is_visible() && *rest_time > 0 {
                 *rest_time -= 1;
                 if *rest_time == 0 {
-                    overlay_win.set_visible(false);
-
                     if let Some(stream) = video.media_stream() {
                         stream.pause();
                         stream.set_muted(true);
                     }
-                    video.set_file(None::<&gio::File>);
+                    overlay_win.set_visible(false);
 
-                    timer.state = timer::pomodoro::TimerState::Play;
-                    timer_ui.play_button.set_label("Pausar");
+                    timer.reset_to_base();
+                    timer_ui.play_button.set_label("Pomodoro!");
+                    timer_ui
+                        .time_label
+                        .set_text(&utils::format_time(timer.current_time));
+                    timer_ui.drawing_area.queue_draw();
                 }
                 return glib::ControlFlow::Continue;
             }
@@ -147,7 +150,6 @@ fn build_ui(app: &gtk4::Application) {
                 if matches!(timer.state, timer::pomodoro::TimerState::End) {
                     *rest_time = timer.initial_work_seconds / 5;
 
-                    // resetar timer imediatamente ao terminar
                     timer.reset_to_base();
                     timer_ui.play_button.set_label("Pomodoro!");
                     timer_ui
@@ -155,10 +157,15 @@ fn build_ui(app: &gtk4::Application) {
                         .set_text(&utils::format_time(timer.current_time));
                     timer_ui.drawing_area.queue_draw();
 
+                    let cfg = settings.borrow();
+                    let file = gio::File::for_path(&cfg.video_path);
+                    video.set_file(Some(&file));
+
                     if let Some(stream) = video.media_stream() {
                         let headphones = audio::detector::AudioManager::are_headphones_connected();
                         stream.set_muted(!headphones);
-                        stream.set_volume(settings.borrow().video_volume);
+                        stream.set_volume(cfg.video_volume);
+                        stream.play();
                     }
                     overlay_win.present();
                 }

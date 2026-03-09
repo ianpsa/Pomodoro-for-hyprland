@@ -15,6 +15,7 @@ impl VideoOverlay {
             .title("Break Time")
             .fullscreened(true)
             .modal(true)
+            .hide_on_close(true)
             .build();
 
         let file = File::for_path(video_path);
